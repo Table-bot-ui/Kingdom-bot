@@ -19,56 +19,48 @@ const client = new Client({
   ]
 });
 
-// Collections
-client.commands = new Collection();      // prefix commands
-client.slashCommands = new Collection(); // slash commands
+client.commands = new Collection();
+client.slashCommands = new Collection();
 
-// ----------------------------
-// Load PREFIX commands (root folder)
-// ----------------------------
-const prefixFiles = fs
-  .readdirSync(__dirname)
-  .filter(file =>
-    file.endsWith(".js") &&
-    !["index.js", "keepalive.js"].includes(file)
-  );
+(async () => {
+  // -------- PREFIX COMMANDS --------
+  const prefixFolder = path.join(__dirname, "prefix");
 
-for (const file of prefixFiles) {
-  import(`./${file}`).then(module => {
-    const cmd = module.default;
-    if (!cmd || !cmd.name || !cmd.execute) return;
+  if (fs.existsSync(prefixFolder)) {
+    const prefixFiles = fs.readdirSync(prefixFolder).filter(f => f.endsWith(".js"));
 
-    client.commands.set(cmd.name, cmd);
-    console.log(`📘 Loaded prefix command: ${cmd.name}`);
-  });
-}
-
-// ----------------------------
-// Load SLASH commands (./commands folder)
-// ----------------------------
-const slashFolder = path.join(__dirname, "commands");
-
-if (fs.existsSync(slashFolder)) {
-  const slashFiles = fs.readdirSync(slashFolder).filter(f => f.endsWith(".js"));
-
-  for (const file of slashFiles) {
-    import(`./commands/${file}`).then(module => {
+    for (const file of prefixFiles) {
+      const module = await import(`./prefix/${file}`);
       const cmd = module.default;
-      if (!cmd || !cmd.data || !cmd.execute) return;
 
+      if (!cmd?.name || !cmd?.execute) continue;
+      client.commands.set(cmd.name, cmd);
+      console.log(`📘 Loaded prefix command: ${cmd.name}`);
+    }
+  }
+
+  // -------- SLASH COMMANDS --------
+  const slashFolder = path.join(__dirname, "commands");
+
+  if (fs.existsSync(slashFolder)) {
+    const slashFiles = fs.readdirSync(slashFolder).filter(f => f.endsWith(".js"));
+
+    for (const file of slashFiles) {
+      const module = await import(`./commands/${file}`);
+      const cmd = module.default;
+
+      if (!cmd?.data || !cmd?.execute) continue;
       client.slashCommands.set(cmd.data.name, cmd);
       console.log(`📗 Loaded slash command: ${cmd.data.name}`);
-    });
+    }
   }
-}
+})();
 
 client.once("ready", () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 });
 
-// ----------------------------
-// PREFIX COMMAND HANDLER
-// ----------------------------
+// PREFIX handler
 client.on("messageCreate", async message => {
   if (!message.content.startsWith("!") || message.author.bot) return;
 
@@ -78,7 +70,6 @@ client.on("messageCreate", async message => {
   if (!cmd) return;
 
   try {
-    // FIXED: pass client
     await cmd.execute(message, args, client);
   } catch (err) {
     console.error(err);
@@ -86,9 +77,7 @@ client.on("messageCreate", async message => {
   }
 });
 
-// ----------------------------
-// SLASH COMMAND HANDLER
-// ----------------------------
+// SLASH handler
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -99,8 +88,9 @@ client.on("interactionCreate", async interaction => {
     await cmd.execute(interaction, client);
   } catch (err) {
     console.error(err);
-    interaction.reply({ content: "Slash command error.", ephemeral: true });
+    if (!interaction.replied)
+      interaction.reply({ content: "Slash command error.", ephemeral: true });
   }
 });
 
-client.login(process.env.TOKEN);
+client.login(process.env.DISCORD_TOKEN);
