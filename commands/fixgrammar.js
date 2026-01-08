@@ -1,5 +1,4 @@
 import { SlashCommandBuilder } from "discord.js";
-import fetch from "node-fetch";
 
 export default {
   data: new SlashCommandBuilder()
@@ -17,14 +16,19 @@ export default {
     const text = interaction.options.getString("text");
 
     try {
-      const response = await fetch("https://api.languagetoolplus.com/v2/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          text,
-          language: "en-US"
-        })
-      });
+      const response = await fetch(
+        `https://api.languagetoolplus.com/v2/check`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: new URLSearchParams({
+            text: text,
+            language: "en-US"
+          })
+        }
+      );
 
       const data = await response.json();
 
@@ -33,15 +37,18 @@ export default {
         return;
       }
 
-      // Apply corrections
-      let fixedText = text;
-      data.matches
-        .sort((a, b) => b.offset - a.offset) // apply from end to start
-        .forEach(match => {
-          fixedText = fixedText.slice(0, match.offset) + match.replacements[0]?.value + fixedText.slice(match.offset + match.length);
-        });
+      // Apply first suggestion from API
+      let corrected = text;
+      for (const match of data.matches) {
+        if (match.replacements && match.replacements.length > 0) {
+          corrected =
+            corrected.slice(0, match.offset) +
+            match.replacements[0].value +
+            corrected.slice(match.offset + match.length);
+        }
+      }
 
-      await interaction.editReply(`✏️ Corrected sentence: ${fixedText}`);
+      await interaction.editReply(`✏️ Corrected sentence: ${corrected}`);
 
     } catch (err) {
       console.error(err);
