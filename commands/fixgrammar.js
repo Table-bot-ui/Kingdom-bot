@@ -1,7 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
-import OpenAI from "openai";
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY }); // Make sure your key is set in Railway as OPENAI_API_KEY
+import fetch from "node-fetch";
 
 export default {
   data: new SlashCommandBuilder()
@@ -14,32 +12,36 @@ export default {
     ),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: true }); // Only you can see this
+    await interaction.deferReply({ ephemeral: true });
 
     const text = interaction.options.getString("text");
 
     try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo", // Use 3.5 instead of GPT-4
-        messages: [
-          {
-            role: "system",
-            content: "You are a grammar assistant. If the sentence is correct, respond 'Correct'. If it has errors, provide the corrected sentence only, including proper punctuation like commas, periods, exclamation marks, or question marks."
-          },
-          {
-            role: "user",
-            content: `Check this sentence: "${text}"`
-          }
-        ]
+      const response = await fetch("https://api.languagetoolplus.com/v2/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          text,
+          language: "en-US"
+        })
       });
 
-      const result = response.choices[0].message.content.trim();
+      const data = await response.json();
 
-      if (result.toLowerCase().includes("correct")) {
+      if (!data.matches || data.matches.length === 0) {
         await interaction.editReply("✅ Your sentence is already correct!");
-      } else {
-        await interaction.editReply(`✏️ Corrected sentence: ${result}`);
+        return;
       }
+
+      // Apply corrections
+      let fixedText = text;
+      data.matches
+        .sort((a, b) => b.offset - a.offset) // apply from end to start
+        .forEach(match => {
+          fixedText = fixedText.slice(0, match.offset) + match.replacements[0]?.value + fixedText.slice(match.offset + match.length);
+        });
+
+      await interaction.editReply(`✏️ Corrected sentence: ${fixedText}`);
 
     } catch (err) {
       console.error(err);
