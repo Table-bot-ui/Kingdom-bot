@@ -3,7 +3,7 @@ import { SlashCommandBuilder } from "discord.js";
 export default {
   data: new SlashCommandBuilder()
     .setName("fixgrammar")
-    .setDescription("Fix grammar")
+    .setDescription("Fix grammar of the provided text")
     .addStringOption(option =>
       option
         .setName("text")
@@ -12,14 +12,17 @@ export default {
     ),
 
   async execute(interaction) {
-    await interaction.deferReply(); // required for longer responses
-
     const text = interaction.options.getString("text");
 
-    // Temporary placeholder logic — just echoes the text
-    // Replace this with actual grammar fixing logic/API
-    const fixed = `Here’s your “fixed” text: ${text}`;
+    // Simple grammar fix: fix common mistakes like 'is you' -> 'are you'
+    let fixed = text
+      .replace(/\bis you\b/gi, "are you")
+      .replace(/\bi am\b/gi, "I am") // capitalize "I"
+      .replace(/\bi\b/gi, "I") // capitalize standalone i
+      .replace(/\s+/g, " ") // remove extra spaces
+      .trim();
 
-    await interaction.editReply(fixed);
+    // Send as a normal message in the channel
+    await interaction.reply(`Here’s your “fixed” text: ${fixed}`);
   }
 };
