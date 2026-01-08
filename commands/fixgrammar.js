@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY }); // Your OpenAI key from Railway env
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY }); // Make sure your key is set in Railway as OPENAI_API_KEY
 
 export default {
   data: new SlashCommandBuilder()
@@ -14,17 +14,17 @@ export default {
     ),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true }); // Only you can see this
 
     const text = interaction.options.getString("text");
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-3.5-turbo", // Use 3.5 instead of GPT-4
         messages: [
           {
             role: "system",
-            content: "You are a grammar assistant. If the sentence is correct, respond 'Correct'. If it has errors, provide the corrected sentence only."
+            content: "You are a grammar assistant. If the sentence is correct, respond 'Correct'. If it has errors, provide the corrected sentence only, including proper punctuation like commas, periods, exclamation marks, or question marks."
           },
           {
             role: "user",
