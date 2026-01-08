@@ -1,7 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
-import OpenAI from "openai";
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import fetch from "node-fetch";
 
 export default {
   data: new SlashCommandBuilder()
@@ -19,29 +17,30 @@ export default {
     const text = interaction.options.getString("text");
 
     try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional grammar checker. Always correct the sentence to proper English with correct grammar, punctuation, and capitalization. Only return the corrected sentence. If the sentence is already perfect, return 'Correct'. Do not echo the original text."
-          },
-          {
-            role: "user",
-            content: `Fix this sentence: "${text}"`
-          }
-        ],
-        temperature: 0
+      const res = await fetch("https://api.languagetool.org/v2/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          text,
+          language: "en-US"
+        })
       });
 
-      const result = response.choices[0].message.content.trim();
+      const data = await res.json();
 
-      if (result.toLowerCase() === "correct") {
+      if (data.matches.length === 0) {
         await interaction.editReply("✅ Your sentence is already correct!");
       } else {
-        await interaction.editReply(`✏️ Corrected sentence: ${result}`);
+        // Apply all suggested replacements
+        let corrected = text;
+        for (const match of data.matches.reverse()) {
+          if (match.replacements.length > 0) {
+            const rep = match.replacements[0].value;
+            corrected = corrected.slice(0, match.offset) + rep + corrected.slice(match.offset + match.length);
+          }
+        }
+        await interaction.editReply(`✏️ Corrected sentence: ${corrected}`);
       }
-
     } catch (err) {
       console.error(err);
       await interaction.editReply("❌ Could not check grammar. Please try again later.");
