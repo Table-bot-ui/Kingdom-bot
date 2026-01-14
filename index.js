@@ -92,5 +92,66 @@ client.on("interactionCreate", async interaction => {
       interaction.reply({ content: "Slash command error.", ephemeral: true });
   }
 });
+const { queue } = require("./musicPlayer");
+const { EmbedBuilder } = require("discord.js");
 
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  const serverQueue = queue.get(interaction.guild.id);
+  if (!serverQueue) {
+    return interaction.reply({ content: "❌ No music playing!", ephemeral: true });
+  }
+
+  switch (interaction.customId) {
+    case "pause":
+      serverQueue.player.pause();
+      return interaction.reply({ content: "⏸ Paused", ephemeral: true });
+
+    case "resume":
+      serverQueue.player.unpause();
+      return interaction.reply({ content: "▶ Resumed", ephemeral: true });
+
+    case "skip":
+      serverQueue.player.stop();
+      return interaction.reply({ content: "⏭ Skipped", ephemeral: true });
+
+    case "stop":
+      serverQueue.songs = [];
+      serverQueue.player.stop();
+      serverQueue.connection.destroy();
+      queue.delete(interaction.guild.id);
+      return interaction.reply({ content: "⏹ Stopped", ephemeral: true });
+
+    case "loop":
+      serverQueue.loop = !serverQueue.loop;
+      return interaction.reply({
+        content: `🔁 Loop ${serverQueue.loop ? "Enabled" : "Disabled"}`,
+        ephemeral: true,
+      });
+
+    case "queue":
+      const list = serverQueue.songs
+        .map((s, i) => `${i + 1}. ${s.title}`)
+        .slice(0, 10)
+        .join("\n");
+
+      const embed = new EmbedBuilder()
+        .setTitle("📜 Song Queue")
+        .setDescription(list || "Empty")
+        .setColor(0x1db954);
+
+      return interaction.reply({ embeds: [embed], ephemeral: true });
+
+    case "volup":
+      serverQueue.volume = Math.min(serverQueue.volume + 0.1, 2);
+      serverQueue.resource.volume.setVolume(serverQueue.volume);
+      return interaction.reply({ content: "🔊 Volume Up", ephemeral: true });
+
+    case "voldown":
+      serverQueue.volume = Math.max(serverQueue.volume - 0.1, 0);
+      serverQueue.resource.volume.setVolume(serverQueue.volume);
+      return interaction.reply({ content: "🔉 Volume Down", ephemeral: true });
+  }
+});
 client.login(process.env.DISCORD_TOKEN);
