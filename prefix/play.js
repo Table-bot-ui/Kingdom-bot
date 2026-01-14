@@ -6,7 +6,7 @@ import {
   ButtonStyle,
 } from "discord.js";
 import ytSearch from "yt-search";
-import { queue, playSong } from "./musicPlayer.js"; // ES Module import
+import { queue, playSong } from "../musicPlayer.js"; // ✅ Corrected import path
 
 export default {
   name: "play",
@@ -40,12 +40,11 @@ export default {
       if (!serverQueue) {
         const player = createAudioPlayer();
 
-        // Join the voice channel
         const connection = joinVoiceChannel({
           channelId: voiceChannel.id,
           guildId: message.guild.id,
           adapterCreator: message.guild.voiceAdapterCreator,
-          selfDeaf: false, // optional for debugging
+          selfDeaf: false,
         });
 
         console.log(`✅ Bot joined VC: ${voiceChannel.name}`);
@@ -64,10 +63,8 @@ export default {
         connection.subscribe(player);
       }
 
-      // Add the song to the queue
       serverQueue.songs.push(song);
 
-      // Send the embed with controls
       const embed = new EmbedBuilder()
         .setTitle("🎶 Music Player")
         .setDescription(`**${song.title}**`)
@@ -97,7 +94,6 @@ export default {
         components: [controls1, controls2],
       });
 
-      // If first song, play it
       if (serverQueue.songs.length === 1) {
         playSong(message.guild, serverQueue.songs[0], message.channel);
       }
