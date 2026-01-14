@@ -1,3 +1,4 @@
+// index.js
 import "./keepalive.js";
 import { Client, GatewayIntentBits, Collection, EmbedBuilder } from "discord.js";
 import dotenv from "dotenv";
@@ -11,19 +12,21 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// --------- CREATE CLIENT ---------
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates, // ✅ Required for VC detection
   ]
 });
 
 client.commands = new Collection();
 client.slashCommands = new Collection();
 
-// Load prefix and slash commands
+// --------- LOAD COMMANDS ---------
 (async () => {
   const prefixFolder = path.join(__dirname, "prefix");
   if (fs.existsSync(prefixFolder)) {
@@ -50,11 +53,12 @@ client.slashCommands = new Collection();
   }
 })();
 
+// --------- READY EVENT ---------
 client.once("ready", () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 });
 
-// PREFIX handler
+// --------- PREFIX COMMAND HANDLER ---------
 client.on("messageCreate", async message => {
   if (!message.content.startsWith("!") || message.author.bot) return;
 
@@ -71,11 +75,13 @@ client.on("messageCreate", async message => {
   }
 });
 
-// SLASH handler
+// --------- INTERACTION HANDLER (SLASH + BUTTONS) ---------
 client.on("interactionCreate", async interaction => {
+  // Slash commands
   if (interaction.isChatInputCommand()) {
     const cmd = client.slashCommands.get(interaction.commandName);
     if (!cmd) return;
+
     try {
       await cmd.execute(interaction, client);
     } catch (err) {
@@ -85,7 +91,7 @@ client.on("interactionCreate", async interaction => {
     }
   }
 
-  // BUTTON handler
+  // Music buttons
   if (interaction.isButton()) {
     const serverQueue = queue.get(interaction.guild.id);
     if (!serverQueue)
@@ -95,24 +101,29 @@ client.on("interactionCreate", async interaction => {
       case "pause":
         serverQueue.player.pause();
         return interaction.reply({ content: "⏸ Paused", ephemeral: true });
+
       case "resume":
         serverQueue.player.unpause();
         return interaction.reply({ content: "▶ Resumed", ephemeral: true });
+
       case "skip":
         serverQueue.player.stop();
         return interaction.reply({ content: "⏭ Skipped", ephemeral: true });
+
       case "stop":
         serverQueue.songs = [];
         serverQueue.player.stop();
         serverQueue.connection.destroy();
         queue.delete(interaction.guild.id);
         return interaction.reply({ content: "⏹ Stopped", ephemeral: true });
+
       case "loop":
         serverQueue.loop = !serverQueue.loop;
         return interaction.reply({
           content: `🔁 Loop ${serverQueue.loop ? "Enabled" : "Disabled"}`,
           ephemeral: true
         });
+
       case "queue":
         const list = serverQueue.songs
           .map((s, i) => `${i + 1}. ${s.title}`)
@@ -123,10 +134,12 @@ client.on("interactionCreate", async interaction => {
           .setDescription(list || "Empty")
           .setColor(0x1db954);
         return interaction.reply({ embeds: [embed], ephemeral: true });
+
       case "volup":
         serverQueue.volume = Math.min(serverQueue.volume + 0.1, 2);
         serverQueue.resource.volume.setVolume(serverQueue.volume);
         return interaction.reply({ content: "🔊 Volume Up", ephemeral: true });
+
       case "voldown":
         serverQueue.volume = Math.max(serverQueue.volume - 0.1, 0);
         serverQueue.resource.volume.setVolume(serverQueue.volume);
@@ -134,14 +147,6 @@ client.on("interactionCreate", async interaction => {
     }
   }
 });
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildVoiceStates, // ✅ ADD THIS
-  ]
-});
 
+// --------- LOGIN ---------
 client.login(process.env.DISCORD_TOKEN);
