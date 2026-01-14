@@ -134,5 +134,14 @@ client.on("interactionCreate", async interaction => {
     }
   }
 });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates, // ✅ ADD THIS
+  ]
+});
 
 client.login(process.env.DISCORD_TOKEN);
