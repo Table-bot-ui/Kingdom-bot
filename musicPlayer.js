@@ -1,10 +1,5 @@
-const {
-  joinVoiceChannel,
-  createAudioPlayer,
-  createAudioResource,
-  AudioPlayerStatus,
-} = require("@discordjs/voice");
-const ytdl = require("ytdl-core");
+import { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } from "@discordjs/voice";
+import ytdl from "ytdl-core";
 
 const queue = new Map();
 
@@ -23,7 +18,7 @@ async function playSong(guild, song, textChannel) {
   });
 
   const resource = createAudioResource(stream, {
-    inlineVolume: true,
+    inlineVolume: true
   });
 
   resource.volume.setVolume(serverQueue.volume);
@@ -41,4 +36,4 @@ async function playSong(guild, song, textChannel) {
   });
 }
 
-module.exports = { queue, playSong };
+export { queue, playSong };

@@ -1,14 +1,14 @@
-const { joinVoiceChannel, createAudioPlayer } = require("@discordjs/voice");
-const {
+import { joinVoiceChannel, createAudioPlayer } from "@discordjs/voice";
+import {
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-} = require("discord.js");
-const ytSearch = require("yt-search");
-const { queue, playSong } = require("./musicPlayer");
+} from "discord.js";
+import ytSearch from "yt-search";
+import { queue, playSong } from "./musicPlayer.js"; // ✅ ES Module import
 
-module.exports = {
+export default {
   name: "play",
   async execute(message, args) {
     const voiceChannel = message.member.voice.channel;
